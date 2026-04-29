@@ -1,0 +1,27 @@
+{
+	"name": "sitegeist-site",
+	"version": "0.1.0",
+	"description": "Sitegeist landing page",
+	"type": "module",
+	"scripts": {
+		"dev": "./run.sh dev",
+		"build": "./run.sh build",
+		"check": "vp exec biome check --write . && vp exec tsc --noEmit"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.5",
+		"@tailwindcss/vite": "^4.1.14",
+		"@types/node": "^24.5.2",
+		"@types/three": "^0.180.0",
+		"lit": "^3.2.1",
+		"tailwindcss": "^4.1.14",
+		"three": "^0.180.0",
+		"tsx": "^4.20.6",
+		"typescript": "^5.9.3",
+		"vite": "catalog:",
+		"vite-plus": "catalog:"
+	},
+	"dependencies": {
+		"@mariozechner/mini-lit": "workspace:*"
+	}
+}

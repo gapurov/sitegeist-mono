@@ -1,0 +1,20 @@
+{
+  "name": "sitegeist-mono",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp run sitegeist#dev",
+    "dev:all": "vp run --parallel --filter sitegeist --filter sitegeist-site --filter @mariozechner/mini-lit --filter @mariozechner/pi-ai --filter @mariozechner/pi-agent-core --filter @mariozechner/pi-web-ui dev",
+    "build": "vp run @mariozechner/mini-lit#build && vp run @mariozechner/pi-tui#build && vp run @mariozechner/pi-ai#build && vp run @mariozechner/pi-agent-core#build && vp run @mariozechner/pi-web-ui#build && vp run sitegeist#build && vp run sitegeist-site#build",
+    "check": "vp check && vp run @mariozechner/mini-lit#check && vp run @mariozechner/pi-web-ui#check && vp run sitegeist#check && vp run sitegeist-site#check",
+    "ready": "vp run check && vp run build"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@10.33.2"
+}

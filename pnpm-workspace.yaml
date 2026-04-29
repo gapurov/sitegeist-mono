@@ -1,0 +1,46 @@
+packages:
+  - apps/*
+  - packages/mini-lit
+  - packages/mini-lit/example
+  - packages/pi-mono/packages/agent
+  - packages/pi-mono/packages/ai
+  - packages/pi-mono/packages/tui
+  - packages/pi-mono/packages/web-ui
+  - packages/pi-mono/packages/web-ui/example
+  - tools/*
+
+catalog:
+  "@biomejs/biome": ^2.4.13
+  "@smithy/node-http-handler": ^4.6.1
+  "@smithy/types": ^4.14.1
+  "@types/node": ^24.12.2
+  "@typescript/native-preview": 7.0.0-dev.20260120.1
+  "@vitest/ui": ^4.1.5
+  highlight.js: ^11.11.1
+  shx: ^0.4.0
+  tsx: ^4.21.0
+  typescript: ^5.9.3
+  vite: npm:@voidzero-dev/vite-plus-core@^0.1.20
+  vite-plus: ^0.1.20
+  vitest: npm:@voidzero-dev/vite-plus-test@^0.1.20
+  zod: ^4.3.6
+
+catalogMode: prefer
+overrides:
+  vite: "catalog:"
+  vitest: "catalog:"
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: "*"
+    vitest: "*"
+
+ignoredBuiltDependencies:
+  - "@parcel/watcher"
+  - "@vaadin/vaadin-usage-statistics"
+  - canvas
+  - esbuild
+  - koffi
+  - protobufjs
