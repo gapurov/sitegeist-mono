@@ -1,0 +1,8 @@
+[submodule "packages/mini-lit"]
+	path = packages/mini-lit
+	url = https://github.com/badlogic/mini-lit.git
+	branch = main
+[submodule "packages/pi-mono"]
+	path = packages/pi-mono
+	url = https://github.com/badlogic/pi-mono.git
+	branch = main

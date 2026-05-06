@@ -528,9 +528,10 @@ export class AskUserWhichElementTool implements AgentTool<typeof selectElementSc
 
 	async execute(
 		_toolCallId: string,
-		args: SelectElementParams,
+		params: unknown,
 		signal?: AbortSignal,
 	): Promise<{ content: Array<{ type: "text"; text: string }>; details: SelectElementResult }> {
+		const args = params as SelectElementParams;
 		try {
 			// Check if already aborted
 			if (signal?.aborted) {

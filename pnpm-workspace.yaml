@@ -10,7 +10,7 @@ packages:
   - tools/*
 
 catalog:
-  "@biomejs/biome": ^2.4.13
+  "@biomejs/biome": 2.3.5
   "@smithy/node-http-handler": ^4.6.1
   "@smithy/types": ^4.14.1
   "@types/node": ^24.12.2

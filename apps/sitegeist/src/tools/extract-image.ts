@@ -151,9 +151,10 @@ export class ExtractImageTool implements AgentTool<typeof extractImageSchema, Ex
 
 	async execute(
 		_toolCallId: string,
-		args: ExtractImageParams,
+		params: unknown,
 		_signal?: AbortSignal,
 	): Promise<AgentToolResult<ExtractImageDetails>> {
+		const args = params as ExtractImageParams;
 		const maxWidth = args.maxWidth || 800;
 		const content: (TextContent | ImageContent)[] = [];
 		const details: ExtractImageDetails = { mode: args.mode, selector: args.selector };

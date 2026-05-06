@@ -70,9 +70,10 @@ export class NavigateTool implements AgentTool<typeof navigateSchema, NavigateRe
 
 	async execute(
 		_toolCallId: string,
-		args: NavigateParams,
+		params: unknown,
 		signal?: AbortSignal,
 	): Promise<{ content: Array<{ type: "text"; text: string }>; details: NavigateResult }> {
+		const args = params as NavigateParams;
 		if (signal?.aborted) {
 			throw new Error("Navigation aborted");
 		}

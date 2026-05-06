@@ -65,9 +65,10 @@ CRITICAL: Use browserjs() and repl tool for DOM manipulation. Use this ONLY for 
 
 	async execute(
 		_toolCallId: string,
-		args: DebuggerParams,
+		params: unknown,
 		signal?: AbortSignal,
 	): Promise<{ content: Array<{ type: "text"; text: string }>; details: DebuggerResult }> {
+		const args = params as DebuggerParams;
 		if (signal?.aborted) {
 			throw new Error("Debugger command aborted");
 		}
