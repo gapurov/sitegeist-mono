@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-18
+
 ### Changed
 
 - Removed duplicate broken Codex fast model entries; use the Speed selector on GPT-5.5 instead.
