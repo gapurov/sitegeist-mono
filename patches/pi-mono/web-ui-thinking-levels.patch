@@ -1,0 +1,120 @@
+diff --git a/packages/web-ui/src/components/AgentInterface.ts b/packages/web-ui/src/components/AgentInterface.ts
+--- a/packages/web-ui/src/components/AgentInterface.ts
++++ b/packages/web-ui/src/components/AgentInterface.ts
+@@ -8,7 +8,7 @@ import "./MessageList.js";
+ import "./Messages.js"; // Import for side effects to register the custom elements
+ import { getAppStorage } from "../storage/app-storage.js";
+ import "./StreamingMessageContainer.js";
+-import type { Agent, AgentEvent } from "@earendil-works/pi-agent-core";
++import type { Agent, AgentEvent, ThinkingLevel } from "@earendil-works/pi-agent-core";
+ import type { Attachment } from "../utils/attachment-utils.js";
+ import { formatUsage } from "../utils/format.js";
+ import { i18n } from "../utils/i18n.js";
+@@ -383,6 +383,6 @@ export class AgentInterface extends LitElement {
+ 							.onThinkingChange=${
+ 								this.enableThinkingSelector
+-									? (level: "off" | "minimal" | "low" | "medium" | "high") => {
++									? (level: ThinkingLevel) => {
+ 											session.state.thinkingLevel = level;
+ 										}
+ 									: undefined
+diff --git a/packages/web-ui/src/components/MessageEditor.ts b/packages/web-ui/src/components/MessageEditor.ts
+--- a/packages/web-ui/src/components/MessageEditor.ts
++++ b/packages/web-ui/src/components/MessageEditor.ts
+@@ -1,4 +1,6 @@
+-import type { Model } from "@earendil-works/pi-ai";
++import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
++import { clampThinkingLevel, getSupportedThinkingLevels, type Model } from "@earendil-works/pi-ai";
++import type { i18nMessages } from "@mariozechner/mini-lit";
+ import { icon } from "@mariozechner/mini-lit";
+ import { Button } from "@mariozechner/mini-lit/dist/Button.js";
+ import { Select, type SelectOption } from "@mariozechner/mini-lit/dist/Select.js";
+@@ -9,7 +11,15 @@ import { Brain, Loader2, Paperclip, Send, Sparkles, Square } from "lucide";
+ import { type Attachment, loadAttachment } from "../utils/attachment-utils.js";
+ import { i18n } from "../utils/i18n.js";
+ import "./AttachmentTile.js";
+-import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
++
++const THINKING_LEVEL_LABELS = {
++	off: "Off",
++	minimal: "Minimal",
++	low: "Low",
++	medium: "Medium",
++	high: "High",
++	xhigh: "XHigh",
++} as const satisfies Record<ThinkingLevel, keyof i18nMessages>;
+ 
+ @customElement("message-editor")
+ export class MessageEditor extends LitElement {
+@@ -37,7 +47,7 @@ export class MessageEditor extends LitElement {
+ 	@property() onSend?: (input: string, attachments: Attachment[]) => void;
+ 	@property() onAbort?: () => void;
+ 	@property() onModelSelect?: () => void;
+-	@property() onThinkingChange?: (level: "off" | "minimal" | "low" | "medium" | "high") => void;
++	@property() onThinkingChange?: (level: ThinkingLevel) => void;
+ 	@property() onFilesChange?: (files: Attachment[]) => void;
+ 	@property() attachments: Attachment[] = [];
+ 	@property() maxFiles = 10;
+@@ -238,7 +248,9 @@ export class MessageEditor extends LitElement {
+ 	override render() {
+ 		// Check if current model supports thinking/reasoning
+ 		const model = this.currentModel;
+-		const supportsThinking = model?.reasoning === true; // Models with reasoning:true support thinking
++		const supportedThinkingLevels: ThinkingLevel[] = model ? getSupportedThinkingLevels(model) : ["off"];
++		const supportsThinking = supportedThinkingLevels.some((level) => level !== "off");
++		const selectedThinkingLevel = model ? clampThinkingLevel(model, this.thinkingLevel) : "off";
+ 
+ 		return html`
+ 			<div
+@@ -326,17 +338,15 @@ export class MessageEditor extends LitElement {
+ 							supportsThinking && this.showThinkingSelector
+ 								? html`
+ 									${Select({
+-										value: this.thinkingLevel,
++										value: selectedThinkingLevel,
+ 										placeholder: i18n("Off"),
+-										options: [
+-											{ value: "off", label: i18n("Off"), icon: icon(Brain, "sm") },
+-											{ value: "minimal", label: i18n("Minimal"), icon: icon(Brain, "sm") },
+-											{ value: "low", label: i18n("Low"), icon: icon(Brain, "sm") },
+-											{ value: "medium", label: i18n("Medium"), icon: icon(Brain, "sm") },
+-											{ value: "high", label: i18n("High"), icon: icon(Brain, "sm") },
+-										] as SelectOption[],
++										options: supportedThinkingLevels.map((level) => ({
++											value: level,
++											label: i18n(THINKING_LEVEL_LABELS[level]),
++											icon: icon(Brain, "sm"),
++										})) as SelectOption[],
+ 										onChange: (value: string) => {
+-											const level = value as "off" | "minimal" | "low" | "medium" | "high";
++											const level = value as ThinkingLevel;
+ 											this.thinkingLevel = level;
+ 											this.onThinkingChange?.(level);
+ 										},
+diff --git a/packages/web-ui/src/utils/i18n.ts b/packages/web-ui/src/utils/i18n.ts
+--- a/packages/web-ui/src/utils/i18n.ts
++++ b/packages/web-ui/src/utils/i18n.ts
+@@ -148,6 +148,7 @@ declare module "@mariozechner/mini-lit" {
+ 		Low: string;
+ 		Medium: string;
+ 		High: string;
++		XHigh: string;
+ 		"Storage Permission Required": string;
+ 		"This app needs persistent storage to save your conversations": string;
+ 		"Why is this needed?": string;
+@@ -360,6 +361,7 @@ export const translations = {
+ 		Low: "Low",
+ 		Medium: "Medium",
+ 		High: "High",
++		XHigh: "XHigh",
+ 		"Storage Permission Required": "Storage Permission Required",
+ 		"This app needs persistent storage to save your conversations":
+ 			"This app needs persistent storage to save your conversations",
+@@ -579,6 +581,7 @@ export const translations = {
+ 		Low: "Niedrig",
+ 		Medium: "Mittel",
+ 		High: "Hoch",
++		XHigh: "XHoch",
+ 		"Storage Permission Required": "Speicherberechtigung erforderlich",
+ 		"This app needs persistent storage to save your conversations":
+ 			"Diese App benötigt dauerhaften Speicher, um Ihre Konversationen zu speichern",

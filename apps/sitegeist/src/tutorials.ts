@@ -76,7 +76,7 @@ Explain the UI elements:
 
 **Message Editor (bottom):**
 - Attachment icon → Attach files to chat
-- Thinking settings (if model supports it) → Off/minimal/low/medium/high. When on, I think before acting, which improves results but takes longer and costs more
+- Thinking settings (if model supports it) → model-specific levels like Off/minimal/low/medium/high/xhigh. When on, I think before acting, which improves results but takes longer and costs more
 - Model selector → Pick different AI models. If you have Ollama running locally (https://ollama.com), you can select from your local models, so everything is truly local
 - Submit/Stop button → Send message or stop me (can also press ESCAPE key while focused on this sidepanel)
 

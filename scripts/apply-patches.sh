@@ -13,7 +13,8 @@ fi
 apply_submodule_patch() {
 	local submodule_path="$1"
 	local patch_file="$2"
-	local touched_path="${3:-}"
+	shift 2
+	local touched_paths=("$@")
 	local submodule_dir="$ROOT_DIR/$submodule_path"
 	local patch_path="$PATCH_DIR/$patch_file"
 
@@ -29,8 +30,8 @@ apply_submodule_patch() {
 	fi
 
 	git -C "$submodule_dir" apply --3way "$patch_path"
-	if [[ -n "$touched_path" ]]; then
-		git -C "$submodule_dir" reset --quiet HEAD -- "$touched_path"
+	if [[ ${#touched_paths[@]} -gt 0 ]]; then
+		git -C "$submodule_dir" reset --quiet HEAD -- "${touched_paths[@]}"
 	fi
 	echo "Applied patch with 3-way merge: $patch_file"
 }
@@ -62,8 +63,15 @@ reverse_submodule_patch() {
 }
 
 if [[ "$MODE" == "--reverse" ]]; then
+	reverse_submodule_patch "packages/pi-mono" "pi-mono/web-ui-thinking-levels.patch"
 	reverse_submodule_patch "packages/pi-mono" "pi-mono/web-ui-agentinterface-streaming.patch"
 	exit 0
 fi
 
 apply_submodule_patch "packages/pi-mono" "pi-mono/web-ui-agentinterface-streaming.patch" "packages/web-ui/src/components/AgentInterface.ts"
+apply_submodule_patch \
+	"packages/pi-mono" \
+	"pi-mono/web-ui-thinking-levels.patch" \
+	"packages/web-ui/src/components/AgentInterface.ts" \
+	"packages/web-ui/src/components/MessageEditor.ts" \
+	"packages/web-ui/src/utils/i18n.ts"

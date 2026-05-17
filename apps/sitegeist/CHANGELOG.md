@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed the thinking level selector to show model-specific levels, including xhigh for supported models.
+
 ## [1.0.1] - 2026-05-17
 
 ### Changed
