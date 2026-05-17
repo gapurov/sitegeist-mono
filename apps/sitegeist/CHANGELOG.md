@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Removed duplicate broken Codex fast model entries; use the Speed selector on GPT-5.5 instead.
+
 ### Fixed
 
 - Restored the Speed selector for GPT-5.5 Codex sessions.
