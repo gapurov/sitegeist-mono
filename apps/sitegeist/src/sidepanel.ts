@@ -310,6 +310,7 @@ const saveSession = async () => {
 			usage,
 			modelId: state.model.id,
 			thinkingLevel: state.thinkingLevel,
+			speedMode: state.speedMode ?? "standard",
 			preview,
 		};
 
@@ -382,6 +383,7 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			systemPrompt: SYSTEM_PROMPT,
 			model: defaultModel,
 			thinkingLevel: "medium",
+			speedMode: "standard",
 			messages: [],
 			tools: [],
 		},
@@ -994,6 +996,7 @@ async function initApp() {
 				systemPrompt: SYSTEM_PROMPT,
 				model: sessionData.model,
 				thinkingLevel: sessionData.thinkingLevel,
+				speedMode: sessionData.speedMode ?? "standard",
 				messages: sessionData.messages,
 				tools: [],
 			});

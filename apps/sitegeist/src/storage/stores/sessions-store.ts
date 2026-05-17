@@ -24,6 +24,7 @@ export class SitegeistSessionsStore extends SessionsStore {
 	private migrateSession(session: SessionData): SessionData {
 		return {
 			...session,
+			speedMode: session.speedMode ?? "standard",
 			messages: this.migrateToolResultMessages(session.messages),
 		};
 	}

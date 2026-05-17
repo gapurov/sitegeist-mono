@@ -1,0 +1,758 @@
+diff --git a/packages/ai/src/types.ts b/packages/ai/src/types.ts
+index 851e4d4b..78d6fe0d 100644
+--- a/packages/ai/src/types.ts
++++ b/packages/ai/src/types.ts
+@@ -62,6 +62,7 @@ export type ImagesProvider = KnownImagesProvider | string;
+ export type ThinkingLevel = "minimal" | "low" | "medium" | "high" | "xhigh";
+ export type ModelThinkingLevel = "off" | ThinkingLevel;
+ export type ThinkingLevelMap = Partial<Record<ModelThinkingLevel, string | null>>;
++export type SpeedMode = "standard" | "fast";
+ 
+ /** Token budgets for each thinking level (token-based providers only) */
+ export interface ThinkingBudgets {
+@@ -91,6 +92,10 @@ export interface StreamOptions {
+ 	 * Providers that do not support this option ignore it.
+ 	 */
+ 	transport?: Transport;
++	/**
++	 * Serving speed preference for providers that support latency tiers.
++	 */
++	speedMode?: SpeedMode;
+ 	/**
+ 	 * Prompt cache retention preference. Providers map this to their supported values.
+ 	 * Default: "short".
+@@ -537,6 +542,8 @@ export interface Model<TApi extends Api> {
+ 	 * Missing keys use provider defaults. null marks a level as unsupported.
+ 	 */
+ 	thinkingLevelMap?: ThinkingLevelMap;
++	/** Supported serving speed modes. Missing means standard only. */
++	speedModes?: SpeedMode[];
+ 	input: ("text" | "image")[];
+ 	cost: {
+ 		input: number; // $/million tokens
+diff --git a/packages/ai/src/models.ts b/packages/ai/src/models.ts
+index 2125e685..dab3a13f 100644
+--- a/packages/ai/src/models.ts
++++ b/packages/ai/src/models.ts
+@@ -1,5 +1,5 @@
+ import { MODELS } from "./models.generated.js";
+-import type { Api, KnownProvider, Model, ModelThinkingLevel, Usage } from "./types.js";
++import type { Api, KnownProvider, Model, ModelThinkingLevel, SpeedMode, Usage } from "./types.js";
+ 
+ const modelRegistry: Map<string, Map<string, Model<Api>>> = new Map();
+ 
+@@ -46,6 +46,7 @@ export function calculateCost<TApi extends Api>(model: Model<TApi>, usage: Usage
+ }
+ 
+ const EXTENDED_THINKING_LEVELS: ModelThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
++const DEFAULT_SPEED_MODES: SpeedMode[] = ["standard"];
+ 
+ export function getSupportedThinkingLevels<TApi extends Api>(model: Model<TApi>): ModelThinkingLevel[] {
+ 	if (!model.reasoning) return ["off"];
+@@ -79,6 +80,14 @@ export function clampThinkingLevel<TApi extends Api>(
+ 	return availableLevels[0] ?? "off";
+ }
+ 
++export function getSupportedSpeedModes<TApi extends Api>(model: Model<TApi>): SpeedMode[] {
++	return model.speedModes?.length ? [...model.speedModes] : [...DEFAULT_SPEED_MODES];
++}
++
++export function clampSpeedMode<TApi extends Api>(model: Model<TApi>, mode: SpeedMode): SpeedMode {
++	return getSupportedSpeedModes(model).includes(mode) ? mode : "standard";
++}
++
+ /**
+  * Check if two models are equal by comparing both their id and provider.
+  * Returns false if either model is null or undefined.
+diff --git a/packages/ai/src/models.generated.ts b/packages/ai/src/models.generated.ts
+index 63bd4e5f..e4355c4a 100644
+--- a/packages/ai/src/models.generated.ts
++++ b/packages/ai/src/models.generated.ts
+@@ -6989,6 +6989,7 @@ export const MODELS = {
+ 			baseUrl: "https://api.openai.com/v1",
+ 			reasoning: true,
+ 			thinkingLevelMap: {"off":"none","xhigh":"xhigh"},
++			speedModes: ["standard","fast"],
+ 			input: ["text", "image"],
+ 			cost: {
+ 				input: 5,
+@@ -7323,6 +7324,7 @@ export const MODELS = {
+ 			baseUrl: "https://chatgpt.com/backend-api",
+ 			reasoning: true,
+ 			thinkingLevelMap: {"xhigh":"xhigh","minimal":"low"},
++			speedModes: ["standard","fast"],
+ 			input: ["text", "image"],
+ 			cost: {
+ 				input: 5,
+diff --git a/packages/ai/src/providers/simple-options.ts b/packages/ai/src/providers/simple-options.ts
+index 288f2c52..7d5edcd6 100644
+--- a/packages/ai/src/providers/simple-options.ts
++++ b/packages/ai/src/providers/simple-options.ts
+@@ -7,6 +7,7 @@ export function buildBaseOptions(model: Model<Api>, options?: SimpleStreamOption
+ 		signal: options?.signal,
+ 		apiKey: apiKey || options?.apiKey,
+ 		transport: options?.transport,
++		speedMode: options?.speedMode,
+ 		cacheRetention: options?.cacheRetention,
+ 		sessionId: options?.sessionId,
+ 		headers: options?.headers,
+diff --git a/packages/ai/src/providers/openai-responses.ts b/packages/ai/src/providers/openai-responses.ts
+index 8cc446d3..12b85ae1 100644
+--- a/packages/ai/src/providers/openai-responses.ts
++++ b/packages/ai/src/providers/openai-responses.ts
+@@ -51,6 +51,16 @@ function getPromptCacheRetention(
+ 	return cacheRetention === "long" && compat.supportsLongCacheRetention ? "24h" : undefined;
+ }
+ 
++function getServiceTier(
++	model: Model<"openai-responses">,
++	options?: OpenAIResponsesOptions,
++): ResponseCreateParamsStreaming["service_tier"] | undefined {
++	if (options?.serviceTier !== undefined) return options.serviceTier;
++	if (!options?.speedMode || !model.speedModes?.includes(options.speedMode)) return undefined;
++	if (options?.speedMode === "fast") return "priority";
++	return "default";
++}
++
+ // OpenAI Responses-specific options
+ export interface OpenAIResponsesOptions extends StreamOptions {
+ 	reasoningEffort?: "minimal" | "low" | "medium" | "high" | "xhigh";
+@@ -109,7 +119,7 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses", OpenAIRes
+ 			stream.push({ type: "start", partial: output });
+ 
+ 			await processResponsesStream(openaiStream, output, stream, model, {
+-				serviceTier: options?.serviceTier,
++				serviceTier: getServiceTier(model, options),
+ 				applyServiceTierPricing: (usage, serviceTier) => applyServiceTierPricing(usage, serviceTier, model),
+ 			});
+ 
+@@ -237,8 +247,9 @@ function buildParams(model: Model<"openai-responses">, context: Context, options
+ 		params.temperature = options?.temperature;
+ 	}
+ 
+-	if (options?.serviceTier !== undefined) {
+-		params.service_tier = options.serviceTier;
++	const serviceTier = getServiceTier(model, options);
++	if (serviceTier !== undefined) {
++		params.service_tier = serviceTier;
+ 	}
+ 
+ 	if (context.tools && context.tools.length > 0) {
+diff --git a/packages/ai/src/providers/openai-codex-responses.ts b/packages/ai/src/providers/openai-codex-responses.ts
+index dc8d8ef7..619c10a1 100644
+--- a/packages/ai/src/providers/openai-codex-responses.ts
++++ b/packages/ai/src/providers/openai-codex-responses.ts
+@@ -357,6 +357,16 @@ export const streamSimpleOpenAICodexResponses: StreamFunction<"openai-codex-resp
+ 	} satisfies OpenAICodexResponsesOptions);
+ };
+ 
++function getServiceTier(
++	model: Model<"openai-codex-responses">,
++	options?: OpenAICodexResponsesOptions,
++): ResponseCreateParamsStreaming["service_tier"] | undefined {
++	if (options?.serviceTier !== undefined) return options.serviceTier;
++	if (!options?.speedMode || !model.speedModes?.includes(options.speedMode)) return undefined;
++	if (options?.speedMode === "fast") return "priority";
++	return "default";
++}
++
+ // ============================================================================
+ // Request Building
+ // ============================================================================
+@@ -387,8 +397,9 @@ function buildRequestBody(
+ 		body.temperature = options.temperature;
+ 	}
+ 
+-	if (options?.serviceTier !== undefined) {
+-		body.service_tier = options.serviceTier;
++	const serviceTier = getServiceTier(model, options);
++	if (serviceTier !== undefined) {
++		body.service_tier = serviceTier;
+ 	}
+ 
+ 	if (context.tools && context.tools.length > 0) {
+@@ -477,7 +488,7 @@ async function processStream(
+ 	options?: OpenAICodexResponsesOptions,
+ ): Promise<void> {
+ 	await processResponsesStream(mapCodexEvents(parseSSE(response)), output, stream, model, {
+-		serviceTier: options?.serviceTier,
++		serviceTier: getServiceTier(model, options),
+ 		resolveServiceTier: resolveCodexServiceTier,
+ 		applyServiceTierPricing: (usage, serviceTier) => applyServiceTierPricing(usage, serviceTier, model),
+ 	});
+@@ -1233,7 +1244,7 @@ async function processWebSocketStream(
+ 			stream,
+ 			model,
+ 			{
+-				serviceTier: options?.serviceTier,
++				serviceTier: getServiceTier(model, options),
+ 				resolveServiceTier: resolveCodexServiceTier,
+ 				applyServiceTierPricing: (usage, serviceTier) => applyServiceTierPricing(usage, serviceTier, model),
+ 			},
+diff --git a/packages/ai/scripts/generate-models.ts b/packages/ai/scripts/generate-models.ts
+index 56dcaa6d..a2387f0e 100644
+--- a/packages/ai/scripts/generate-models.ts
++++ b/packages/ai/scripts/generate-models.ts
+@@ -15,6 +15,7 @@ import {
+ 	KnownProvider,
+ 	Model,
+ 	type OpenAICompletionsCompat,
++	type SpeedMode,
+ } from "../src/types.js";
+ 
+ const __filename = fileURLToPath(import.meta.url);
+@@ -137,6 +138,7 @@ const DEEPSEEK_V4_THINKING_LEVEL_MAP = {
+ 	high: "high",
+ 	xhigh: "max",
+ } as const;
++const FAST_SPEED_MODES: SpeedMode[] = ["standard", "fast"];
+ 
+ const OPENAI_RESPONSES_NONE_REASONING_MODELS = new Set([
+ 	"gpt-5.1",
+@@ -180,6 +182,14 @@ function supportsOpenAiXhigh(modelId: string): boolean {
+ 	);
+ }
+ 
++function supportsFastMode(model: Model<any>): boolean {
++	return (
++		model.id === "gpt-5.5" &&
++		((model.provider === "openai" && model.api === "openai-responses") ||
++			(model.provider === "openai-codex" && model.api === "openai-codex-responses"))
++	);
++}
++
+ function isGoogleThinkingApi(model: Model<any>): boolean {
+ 	return model.api === "google-generative-ai" || model.api === "google-vertex";
+ }
+@@ -249,6 +259,12 @@ function applyThinkingLevelMetadata(model: Model<any>): void {
+ 	}
+ }
+ 
++function applySpeedModeMetadata(model: Model<any>): void {
++	if (supportsFastMode(model)) {
++		model.speedModes = [...FAST_SPEED_MODES];
++	}
++}
++
+ function getAnthropicMessagesCompat(provider: string, modelId: string): AnthropicMessagesCompat | undefined {
+ 	return EAGER_TOOL_INPUT_STREAMING_UNSUPPORTED_ANTHROPIC_MODELS.has(`${provider}:${modelId}`)
+ 		? { supportsEagerToolInputStreaming: false }
+@@ -1887,6 +1903,7 @@ async function generateModels() {
+ 
+ 	for (const model of allModels) {
+ 		applyThinkingLevelMetadata(model);
++		applySpeedModeMetadata(model);
+ 	}
+ 
+ 	// Group by provider and deduplicate by model ID
+@@ -1939,6 +1956,9 @@ export const MODELS = {
+ 			if (model.thinkingLevelMap) {
+ 				output += `\t\t\tthinkingLevelMap: ${JSON.stringify(model.thinkingLevelMap)},\n`;
+ 			}
++			if (model.speedModes) {
++				output += `\t\t\tspeedModes: ${JSON.stringify(model.speedModes)},\n`;
++			}
+ 			output += `\t\t\tinput: [${model.input.map(i => `"${i}"`).join(", ")}],\n`;
+ 			output += `\t\t\tcost: {\n`;
+ 			output += `\t\t\t\tinput: ${model.cost.input},\n`;
+diff --git a/packages/ai/test/openai-codex-stream.test.ts b/packages/ai/test/openai-codex-stream.test.ts
+index 65b88315..941e5631 100644
+--- a/packages/ai/test/openai-codex-stream.test.ts
++++ b/packages/ai/test/openai-codex-stream.test.ts
+@@ -659,6 +659,61 @@ describe("openai-codex streaming", () => {
+ 		},
+ 	);
+ 
++	it("maps speed mode to service tier only for speed-capable Codex models", async () => {
++		const tempDir = mkdtempSync(join(tmpdir(), "pi-codex-stream-"));
++		process.env.PI_CODING_AGENT_DIR = tempDir;
++		const token = mockToken();
++		const capturedBodies: Array<Record<string, unknown>> = [];
++
++		const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
++			const url = typeof input === "string" ? input : input.toString();
++			if (url === "https://api.github.com/repos/openai/codex/releases/latest") {
++				return new Response(JSON.stringify({ tag_name: "rust-v0.0.0" }), { status: 200 });
++			}
++			if (url.startsWith("https://raw.githubusercontent.com/openai/codex/")) {
++				return new Response("PROMPT", { status: 200, headers: { etag: '"etag"' } });
++			}
++			if (url === "https://chatgpt.com/backend-api/codex/responses") {
++				capturedBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
++				return new Response(buildSSEPayload({ status: "completed" }), {
++					status: 200,
++					headers: { "content-type": "text/event-stream" },
++				});
++			}
++			return new Response("not found", { status: 404 });
++		});
++		vi.stubGlobal("fetch", fetchMock);
++
++		const baseModel: Model<"openai-codex-responses"> = {
++			id: "gpt-5.5",
++			name: "GPT-5.5",
++			api: "openai-codex-responses",
++			provider: "openai-codex",
++			baseUrl: "https://chatgpt.com/backend-api",
++			reasoning: true,
++			speedModes: ["standard", "fast"],
++			input: ["text"],
++			cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 },
++			contextWindow: 400000,
++			maxTokens: 128000,
++		};
++		const context: Context = {
++			systemPrompt: "You are a helpful assistant.",
++			messages: [{ role: "user", content: "Say hello", timestamp: Date.now() }],
++		};
++
++		await streamOpenAICodexResponses(baseModel, context, { apiKey: token, speedMode: "fast" }).result();
++		await streamOpenAICodexResponses(baseModel, context, { apiKey: token, speedMode: "standard" }).result();
++		await streamOpenAICodexResponses({ ...baseModel, speedModes: undefined }, context, {
++			apiKey: token,
++			speedMode: "fast",
++		}).result();
++
++		expect(capturedBodies[0]?.service_tier).toBe("priority");
++		expect(capturedBodies[1]?.service_tier).toBe("default");
++		expect(capturedBodies[2]).not.toHaveProperty("service_tier");
++	});
++
+ 	it("does not set session_id/x-client-request-id headers when sessionId is not provided", async () => {
+ 		const tempDir = mkdtempSync(join(tmpdir(), "pi-codex-stream-"));
+ 		process.env.PI_CODING_AGENT_DIR = tempDir;
+diff --git a/packages/ai/test/openai-responses-copilot-provider.test.ts b/packages/ai/test/openai-responses-copilot-provider.test.ts
+index c4140a5c..3c58bf67 100644
+--- a/packages/ai/test/openai-responses-copilot-provider.test.ts
++++ b/packages/ai/test/openai-responses-copilot-provider.test.ts
+@@ -51,6 +51,44 @@ async function captureOpenAIResponseHeaders(
+ 	return captured;
+ }
+ 
++async function captureOpenAIResponsePayload(
++	model: Model<"openai-responses">,
++	options: Parameters<typeof streamOpenAIResponses>[2],
++): Promise<Record<string, unknown>> {
++	let capturedPayload: unknown;
++	vi.spyOn(globalThis, "fetch").mockResolvedValue(
++		new Response("data: [DONE]\n\n", {
++			status: 200,
++			headers: { "content-type": "text/event-stream" },
++		}),
++	);
++
++	const stream = streamOpenAIResponses(
++		model,
++		{
++			systemPrompt: "sys",
++			messages: [{ role: "user", content: "hi", timestamp: Date.now() }],
++		},
++		{
++			apiKey: "test-key",
++			...options,
++			onPayload: (payload) => {
++				capturedPayload = payload;
++				return options?.onPayload?.(payload, model) ?? payload;
++			},
++		},
++	);
++
++	for await (const event of stream) {
++		if (event.type === "done" || event.type === "error") break;
++	}
++
++	if (!capturedPayload || typeof capturedPayload !== "object") {
++		throw new Error("Expected payload capture");
++	}
++	return capturedPayload as Record<string, unknown>;
++}
++
+ describe("openai-responses provider defaults", () => {
+ 	afterEach(() => {
+ 		vi.restoreAllMocks();
+@@ -212,6 +250,25 @@ describe("openai-responses provider defaults", () => {
+ 		expect(captured).toEqual({ sessionId: null, clientRequestId: null });
+ 	});
+ 
++	it("maps speed mode to service tier only for speed-capable models", async () => {
++		const fastModel = getModel("openai", "gpt-5.5");
++		const normalModel = getModel("openai", "gpt-5.4");
++
++		await expect(captureOpenAIResponsePayload(fastModel, { speedMode: "fast" })).resolves.toMatchObject({
++			service_tier: "priority",
++		});
++		vi.restoreAllMocks();
++
++		await expect(captureOpenAIResponsePayload(fastModel, { speedMode: "standard" })).resolves.toMatchObject({
++			service_tier: "default",
++		});
++		vi.restoreAllMocks();
++
++		await expect(captureOpenAIResponsePayload(normalModel, { speedMode: "fast" })).resolves.not.toHaveProperty(
++			"service_tier",
++		);
++	});
++
+ 	it.each([
+ 		["gpt-5.4", "priority", 2],
+ 		["gpt-5.5", "priority", 2.5],
+diff --git a/packages/agent/src/types.ts b/packages/agent/src/types.ts
+index f24d2496..e3607d6e 100644
+--- a/packages/agent/src/types.ts
++++ b/packages/agent/src/types.ts
+@@ -5,6 +5,7 @@ import type {
+ 	Message,
+ 	Model,
+ 	SimpleStreamOptions,
++	SpeedMode,
+ 	streamSimple,
+ 	TextContent,
+ 	Tool,
+@@ -128,6 +129,8 @@ export interface AgentLoopTurnUpdate {
+ 	model?: Model<any>;
+ 	/** Thinking level for the next provider request. */
+ 	thinkingLevel?: ThinkingLevel;
++	/** Speed mode for the next provider request. */
++	speedMode?: SpeedMode;
+ }
+ 
+ export interface PrepareNextTurnContext extends ShouldStopAfterTurnContext {}
+@@ -283,6 +286,9 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
+  */
+ export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+ 
++/** Serving speed preference for models that support it. */
++export type { SpeedMode };
++
+ /**
+  * Extensible interface for custom app messages.
+  * Apps can extend via declaration merging:
+@@ -321,6 +327,8 @@ export interface AgentState {
+ 	model: Model<any>;
+ 	/** Requested reasoning level for future turns. */
+ 	thinkingLevel: ThinkingLevel;
++	/** Requested serving speed for future turns. Defaults to "standard". */
++	speedMode?: SpeedMode;
+ 	/** Available tools. Assigning a new array copies the top-level array. */
+ 	set tools(tools: AgentTool<any>[]);
+ 	get tools(): AgentTool<any>[];
+diff --git a/packages/agent/src/agent.ts b/packages/agent/src/agent.ts
+index 59c06415..d3d95a7c 100644
+--- a/packages/agent/src/agent.ts
++++ b/packages/agent/src/agent.ts
+@@ -73,6 +73,7 @@ function createMutableAgentState(
+ 		systemPrompt: initialState?.systemPrompt ?? "",
+ 		model: initialState?.model ?? DEFAULT_MODEL,
+ 		thinkingLevel: initialState?.thinkingLevel ?? "off",
++		speedMode: initialState?.speedMode ?? "standard",
+ 		get tools() {
+ 			return tools;
+ 		},
+@@ -421,6 +422,7 @@ export class Agent {
+ 		return {
+ 			model: this._state.model,
+ 			reasoning: this._state.thinkingLevel === "off" ? undefined : this._state.thinkingLevel,
++			speedMode: this._state.speedMode ?? "standard",
+ 			sessionId: this.sessionId,
+ 			onPayload: this.onPayload,
+ 			onResponse: this.onResponse,
+diff --git a/packages/agent/src/agent-loop.ts b/packages/agent/src/agent-loop.ts
+index 7226082a..e83b1047 100644
+--- a/packages/agent/src/agent-loop.ts
++++ b/packages/agent/src/agent-loop.ts
+@@ -235,6 +235,7 @@ async function runLoop(
+ 							: nextTurnSnapshot.thinkingLevel === "off"
+ 								? undefined
+ 								: nextTurnSnapshot.thinkingLevel,
++					speedMode: nextTurnSnapshot.speedMode ?? config.speedMode,
+ 				};
+ 			}
+ 
+diff --git a/packages/agent/src/proxy.ts b/packages/agent/src/proxy.ts
+index 5f0925c9..2a246f91 100644
+--- a/packages/agent/src/proxy.ts
++++ b/packages/agent/src/proxy.ts
+@@ -61,6 +61,7 @@ type ProxySerializableStreamOptions = Pick<
+ 	| "temperature"
+ 	| "maxTokens"
+ 	| "reasoning"
++	| "speedMode"
+ 	| "cacheRetention"
+ 	| "sessionId"
+ 	| "headers"
+@@ -103,6 +104,7 @@ function buildProxyRequestOptions(options: ProxyStreamOptions): ProxySerializabl
+ 		temperature: options.temperature,
+ 		maxTokens: options.maxTokens,
+ 		reasoning: options.reasoning,
++		speedMode: options.speedMode,
+ 		cacheRetention: options.cacheRetention,
+ 		sessionId: options.sessionId,
+ 		headers: options.headers,
+diff --git a/packages/web-ui/src/components/MessageEditor.ts b/packages/web-ui/src/components/MessageEditor.ts
+index 697e6f2f..d1fc143c 100644
+--- a/packages/web-ui/src/components/MessageEditor.ts
++++ b/packages/web-ui/src/components/MessageEditor.ts
+@@ -1,13 +1,20 @@
+ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+-import { clampThinkingLevel, getSupportedThinkingLevels, type Model } from "@earendil-works/pi-ai";
++import {
++	clampSpeedMode,
++	clampThinkingLevel,
++	getSupportedSpeedModes,
++	getSupportedThinkingLevels,
++	type Model,
++	type SpeedMode,
++} from "@earendil-works/pi-ai";
+ import type { i18nMessages } from "@mariozechner/mini-lit";
+ import { icon } from "@mariozechner/mini-lit";
+ import { Button } from "@mariozechner/mini-lit/dist/Button.js";
+-import { Select, type SelectOption } from "@mariozechner/mini-lit/dist/Select.js";
++import { Select, type SelectGroup, type SelectOption } from "@mariozechner/mini-lit/dist/Select.js";
+ import { html, LitElement } from "lit";
+ import { customElement, property, state } from "lit/decorators.js";
+ import { createRef, ref } from "lit/directives/ref.js";
+-import { Brain, Loader2, Paperclip, Send, Sparkles, Square } from "lucide";
++import { Brain, Gauge, Loader2, Paperclip, Send, Sparkles, Square } from "lucide";
+ import { type Attachment, loadAttachment } from "../utils/attachment-utils.js";
+ import { i18n } from "../utils/i18n.js";
+ import "./AttachmentTile.js";
+@@ -21,6 +28,11 @@ const THINKING_LEVEL_LABELS = {
+ 	xhigh: "XHigh",
+ } as const satisfies Record<ThinkingLevel, keyof i18nMessages>;
+ 
++const SPEED_MODE_LABELS = {
++	standard: "Standard",
++	fast: "Fast",
++} as const satisfies Record<SpeedMode, keyof i18nMessages>;
++
+ @customElement("message-editor")
+ export class MessageEditor extends LitElement {
+ 	private _value = "";
+@@ -40,14 +52,17 @@ export class MessageEditor extends LitElement {
+ 	@property() isStreaming = false;
+ 	@property() currentModel?: Model<any>;
+ 	@property() thinkingLevel: ThinkingLevel = "off";
++	@property() speedMode: SpeedMode = "standard";
+ 	@property() showAttachmentButton = true;
+ 	@property() showModelSelector = true;
+ 	@property() showThinkingSelector = true;
++	@property() showSpeedSelector = true;
+ 	@property() onInput?: (value: string) => void;
+ 	@property() onSend?: (input: string, attachments: Attachment[]) => void;
+ 	@property() onAbort?: () => void;
+ 	@property() onModelSelect?: () => void;
+ 	@property() onThinkingChange?: (level: ThinkingLevel) => void;
++	@property() onSpeedChange?: (mode: SpeedMode) => void;
+ 	@property() onFilesChange?: (files: Attachment[]) => void;
+ 	@property() attachments: Attachment[] = [];
+ 	@property() maxFiles = 10;
+@@ -251,6 +266,9 @@ export class MessageEditor extends LitElement {
+ 		const supportedThinkingLevels: ThinkingLevel[] = model ? getSupportedThinkingLevels(model) : ["off"];
+ 		const supportsThinking = supportedThinkingLevels.some((level) => level !== "off");
+ 		const selectedThinkingLevel = model ? clampThinkingLevel(model, this.thinkingLevel) : "off";
++		const supportedSpeedModes: SpeedMode[] = model ? getSupportedSpeedModes(model) : ["standard"];
++		const supportsSpeedMode = supportedSpeedModes.length > 1;
++		const selectedSpeedMode = model ? clampSpeedMode(model, this.speedMode) : "standard";
+ 
+ 		return html`
+ 			<div
+@@ -334,6 +352,35 @@ export class MessageEditor extends LitElement {
+ 									`
+ 								: ""
+ 						}
++						${
++							supportsSpeedMode && this.showSpeedSelector
++								? html`
++									${Select({
++										value: selectedSpeedMode,
++										placeholder: i18n("Speed"),
++										options: [
++											{
++												label: i18n("Speed"),
++												options: supportedSpeedModes.map((mode) => ({
++													value: mode,
++													label: i18n(SPEED_MODE_LABELS[mode]),
++													icon: icon(Gauge, "sm"),
++												})),
++											},
++										] as SelectGroup[],
++										onChange: (value: string) => {
++											const mode = value as SpeedMode;
++											this.speedMode = mode;
++											this.onSpeedChange?.(mode);
++										},
++										width: "96px",
++										size: "sm",
++										variant: "ghost",
++										fitContent: true,
++									})}
++								`
++								: ""
++						}
+ 						${
+ 							supportsThinking && this.showThinkingSelector
+ 								? html`
+diff --git a/packages/web-ui/src/components/AgentInterface.ts b/packages/web-ui/src/components/AgentInterface.ts
+index 1e43abfe..42368518 100644
+--- a/packages/web-ui/src/components/AgentInterface.ts
++++ b/packages/web-ui/src/components/AgentInterface.ts
+@@ -9,7 +9,7 @@ import "./MessageList.js";
+ import "./Messages.js"; // Import for side effects to register the custom elements
+ import { getAppStorage } from "../storage/app-storage.js";
+ import "./StreamingMessageContainer.js";
+-import type { Agent, AgentEvent, ThinkingLevel } from "@earendil-works/pi-agent-core";
++import type { Agent, AgentEvent, SpeedMode, ThinkingLevel } from "@earendil-works/pi-agent-core";
+ import type { Attachment } from "../utils/attachment-utils.js";
+ import { formatUsage } from "../utils/format.js";
+ import { i18n } from "../utils/i18n.js";
+@@ -24,6 +24,7 @@ export class AgentInterface extends LitElement {
+ 	@property({ type: Boolean }) enableAttachments = true;
+ 	@property({ type: Boolean }) enableModelSelector = true;
+ 	@property({ type: Boolean }) enableThinkingSelector = true;
++	@property({ type: Boolean }) enableSpeedSelector = true;
+ 	@property({ type: Boolean }) showThemeToggle = false;
+ 	// Optional custom API key prompt handler - if not provided, uses default dialog
+ 	@property({ attribute: false }) onApiKeyRequired?: (provider: string) => Promise<boolean>;
+@@ -380,9 +381,11 @@ export class AgentInterface extends LitElement {
+ 							.isStreaming=${state.isStreaming}
+ 							.currentModel=${state.model}
+ 							.thinkingLevel=${state.thinkingLevel}
++							.speedMode=${state.speedMode ?? "standard"}
+ 							.showAttachmentButton=${this.enableAttachments}
+ 							.showModelSelector=${this.enableModelSelector}
+ 							.showThinkingSelector=${this.enableThinkingSelector}
++							.showSpeedSelector=${this.enableSpeedSelector}
+ 							.onSend=${(input: string, attachments: Attachment[]) => {
+ 								this.sendMessage(input, attachments);
+ 							}}
+@@ -403,6 +406,13 @@ export class AgentInterface extends LitElement {
+ 										}
+ 									: undefined
+ 							}
++							.onSpeedChange=${
++								this.enableSpeedSelector
++									? (mode: SpeedMode) => {
++											session.state.speedMode = mode;
++										}
++									: undefined
++							}
+ 						></message-editor>
+ 						${this.renderStats()}
+ 					</div>
+diff --git a/packages/web-ui/src/utils/i18n.ts b/packages/web-ui/src/utils/i18n.ts
+index 50b4c4ae..b1df5a23 100644
+--- a/packages/web-ui/src/utils/i18n.ts
++++ b/packages/web-ui/src/utils/i18n.ts
+@@ -10,6 +10,7 @@ declare module "@mariozechner/mini-lit" {
+ 		"Search models...": string;
+ 		Format: string;
+ 		Thinking: string;
++		Speed: string;
+ 		Vision: string;
+ 		You: string;
+ 		Assistant: string;
+@@ -149,6 +150,8 @@ declare module "@mariozechner/mini-lit" {
+ 		Medium: string;
+ 		High: string;
+ 		XHigh: string;
++		Standard: string;
++		Fast: string;
+ 		"Storage Permission Required": string;
+ 		"This app needs persistent storage to save your conversations": string;
+ 		"Why is this needed?": string;
+@@ -219,6 +222,7 @@ export const translations = {
+ 		"Search models...": "Search models...",
+ 		Format: "Format",
+ 		Thinking: "Thinking",
++		Speed: "Speed",
+ 		Vision: "Vision",
+ 		You: "You",
+ 		Assistant: "Assistant",
+@@ -362,6 +366,8 @@ export const translations = {
+ 		Medium: "Medium",
+ 		High: "High",
+ 		XHigh: "XHigh",
++		Standard: "Standard",
++		Fast: "Fast",
+ 		"Storage Permission Required": "Storage Permission Required",
+ 		"This app needs persistent storage to save your conversations":
+ 			"This app needs persistent storage to save your conversations",
+@@ -439,6 +445,7 @@ export const translations = {
+ 		"Search models...": "Modelle suchen...",
+ 		Format: "Formatieren",
+ 		Thinking: "Thinking",
++		Speed: "Geschwindigkeit",
+ 		Vision: "Vision",
+ 		You: "Sie",
+ 		Assistant: "Assistent",
+@@ -582,6 +589,8 @@ export const translations = {
+ 		Medium: "Mittel",
+ 		High: "Hoch",
+ 		XHigh: "XHoch",
++		Standard: "Standard",
++		Fast: "Schnell",
+ 		"Storage Permission Required": "Speicherberechtigung erforderlich",
+ 		"This app needs persistent storage to save your conversations":
+ 			"Diese App benötigt dauerhaften Speicher, um Ihre Konversationen zu speichern",
+diff --git a/packages/web-ui/src/storage/types.ts b/packages/web-ui/src/storage/types.ts
+index 7ed2bd0f..7bfe941e 100644
+--- a/packages/web-ui/src/storage/types.ts
++++ b/packages/web-ui/src/storage/types.ts
+@@ -1,4 +1,4 @@
+-import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
++import type { AgentMessage, SpeedMode, ThinkingLevel } from "@earendil-works/pi-agent-core";
+ import type { Model } from "@earendil-works/pi-ai";
+ 
+ /**
+@@ -132,6 +132,9 @@ export interface SessionMetadata {
+ 	/** Last used thinking level */
+ 	thinkingLevel: ThinkingLevel;
+ 
++	/** Last used speed mode */
++	speedMode?: SpeedMode;
++
+ 	/**
+ 	 * Preview text for search and display.
+ 	 * First 2KB of conversation text (user + assistant messages in sequence).
+@@ -157,6 +160,9 @@ export interface SessionData {
+ 	/** Last selected thinking level */
+ 	thinkingLevel: ThinkingLevel;
+ 
++	/** Last selected speed mode */
++	speedMode?: SpeedMode;
++
+ 	/** Full conversation history (with attachments inline) */
+ 	messages: AgentMessage[];
+ 
+diff --git a/packages/web-ui/src/storage/stores/sessions-store.ts b/packages/web-ui/src/storage/stores/sessions-store.ts
+index d244f955..8f76cb7c 100644
+--- a/packages/web-ui/src/storage/stores/sessions-store.ts
++++ b/packages/web-ui/src/storage/stores/sessions-store.ts
+@@ -105,6 +105,7 @@ export class SessionsStore extends Store {
+ 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+ 			},
+ 			thinkingLevel: state.thinkingLevel || "off",
++			speedMode: state.speedMode ?? "standard",
+ 			preview: "",
+ 		};
+ 
+@@ -113,6 +114,7 @@ export class SessionsStore extends Store {
+ 			title: title || meta.title,
+ 			model: state.model,
+ 			thinkingLevel: state.thinkingLevel,
++			speedMode: state.speedMode ?? "standard",
+ 			messages: state.messages || [],
+ 			createdAt: meta.createdAt,
+ 			lastModified: new Date().toISOString(),
+diff --git a/packages/web-ui/src/index.ts b/packages/web-ui/src/index.ts
+index c808cde2..dc7b6e6a 100644
+--- a/packages/web-ui/src/index.ts
++++ b/packages/web-ui/src/index.ts
+@@ -1,6 +1,6 @@
+ // Main chat interface
+ 
+-export type { Agent, AgentMessage, AgentState, ThinkingLevel } from "@earendil-works/pi-agent-core";
++export type { Agent, AgentMessage, AgentState, SpeedMode, ThinkingLevel } from "@earendil-works/pi-agent-core";
+ export type { Model } from "@earendil-works/pi-ai";
+ export { ChatPanel } from "./ChatPanel.js";
+ // Components

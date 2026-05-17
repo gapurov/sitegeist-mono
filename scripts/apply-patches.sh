@@ -63,6 +63,7 @@ reverse_submodule_patch() {
 }
 
 if [[ "$MODE" == "--reverse" ]]; then
+	reverse_submodule_patch "packages/pi-mono" "pi-mono/pi-mono-speed-mode.patch"
 	reverse_submodule_patch "packages/pi-mono" "pi-mono/web-ui-thinking-levels.patch"
 	reverse_submodule_patch "packages/pi-mono" "pi-mono/web-ui-agentinterface-streaming.patch"
 	exit 0
@@ -75,3 +76,25 @@ apply_submodule_patch \
 	"packages/web-ui/src/components/AgentInterface.ts" \
 	"packages/web-ui/src/components/MessageEditor.ts" \
 	"packages/web-ui/src/utils/i18n.ts"
+apply_submodule_patch \
+	"packages/pi-mono" \
+	"pi-mono/pi-mono-speed-mode.patch" \
+	"packages/ai/src/types.ts" \
+	"packages/ai/src/models.ts" \
+	"packages/ai/src/models.generated.ts" \
+	"packages/ai/src/providers/simple-options.ts" \
+	"packages/ai/src/providers/openai-responses.ts" \
+	"packages/ai/src/providers/openai-codex-responses.ts" \
+	"packages/ai/scripts/generate-models.ts" \
+	"packages/ai/test/openai-codex-stream.test.ts" \
+	"packages/ai/test/openai-responses-copilot-provider.test.ts" \
+	"packages/agent/src/types.ts" \
+	"packages/agent/src/agent.ts" \
+	"packages/agent/src/agent-loop.ts" \
+	"packages/agent/src/proxy.ts" \
+	"packages/web-ui/src/components/MessageEditor.ts" \
+	"packages/web-ui/src/components/AgentInterface.ts" \
+	"packages/web-ui/src/utils/i18n.ts" \
+	"packages/web-ui/src/storage/types.ts" \
+	"packages/web-ui/src/storage/stores/sessions-store.ts" \
+	"packages/web-ui/src/index.ts"

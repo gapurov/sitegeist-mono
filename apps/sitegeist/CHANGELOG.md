@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-17
+
+### Added
+
+- Added a separate Standard/Fast speed selector for supported GPT-5.5 models.
+
 ## [1.0.2] - 2026-05-17
 
 ### Fixed
