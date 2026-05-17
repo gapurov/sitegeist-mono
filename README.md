@@ -1,6 +1,6 @@
-# Sitegeist Monorepo
+# Sitegeist Remixed
 
-This repository is an easier-to-manage monorepo version of the original
+This repository is an easier-to-manage remixed version of the original
 [Sitegeist](https://github.com/badlogic/sitegeist) project.
 
 For the original upstream project, see
@@ -18,7 +18,7 @@ For the original upstream project, see
 - Clone with submodules:
 
 ```bash
-git clone --recurse-submodules https://github.com/gapurov/sitegeist-mono.git
+git clone --recurse-submodules https://github.com/gapurov/sitegeist-remixed.git
 ```
 
 - Or initialize submodules after cloning:
