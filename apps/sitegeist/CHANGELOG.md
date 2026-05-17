@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored the Speed selector for GPT-5.5 Codex sessions.
+
 ## [1.1.0] - 2026-05-17
 
 ### Changed

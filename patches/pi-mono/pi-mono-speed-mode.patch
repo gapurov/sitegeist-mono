@@ -168,14 +168,21 @@ index 9ad1d624..1e93609e 100644
  			input: ["text", "image"],
  			cost: {
  				input: 5,
-@@ -7307,6 +7308,7 @@ export const MODELS = {
+@@ -7284,13 +7285,14 @@ export const MODELS = {
+ 		"gpt-5.5": {
+ 			id: "gpt-5.5",
+ 			name: "GPT-5.5",
+ 			api: "openai-codex-responses",
+ 			provider: "openai-codex",
  			baseUrl: "https://chatgpt.com/backend-api",
  			reasoning: true,
  			thinkingLevelMap: {"xhigh":"xhigh","minimal":"low"},
 +			speedModes: ["standard","fast"],
  			input: ["text", "image"],
  			cost: {
- 				input: 12.5,
+ 				input: 5,
+ 				output: 30,
+ 				cacheRead: 0.5,
 @@ -9041,7 +9043,7 @@ export const MODELS = {
  				cacheRead: 0.024999999999999998,
  				cacheWrite: 0.08333333333333334,
