@@ -1,0 +1,81 @@
+name: Release Sitegeist
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.2 --activate
+
+      - name: Apply local patches
+        run: ./scripts/apply-patches.sh
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check
+        run: pnpm exec vp run check
+
+      - name: Build
+        run: pnpm exec vp run build
+
+      - name: Create extension zip
+        run: |
+          cd apps/sitegeist/dist-chrome
+          find . -name "*.map" -type f -delete
+          zip -r ../sitegeist.zip .
+
+      - name: Extract version
+        id: version
+        run: |
+          echo "version=$(node -p 'require(\"./apps/sitegeist/dist-chrome/manifest.json\").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const version = process.env.VERSION;
+            const changelog = fs.readFileSync('apps/sitegeist/CHANGELOG.md', 'utf8');
+            const re = new RegExp('## \\\\[' + version.replace(/\\./g, '\\\\.') + '\\\\][^\\\\n]*\\n(.*?)(?=\\n## \\\\[|$)', 's');
+            const match = changelog.match(re);
+            let notes = match ? match[1].trim() : '';
+            notes += '\n\n---\n\nDownload `sitegeist.zip`, unzip, and load as unpacked extension in Chrome/Edge.\n\nSee installation instructions: https://sitegeist.ai/install.html';
+            fs.writeFileSync('/tmp/release-notes.md', notes);
+          "
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$TAG_NAME" apps/sitegeist/sitegeist.zip \
+            --title "Sitegeist $VERSION" \
+            --notes-file /tmp/release-notes.md \
+            --latest
