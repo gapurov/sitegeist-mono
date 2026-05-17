@@ -91,7 +91,7 @@ index f24d2496..e3607d6e 100644
  	set tools(tools: AgentTool<any>[]);
  	get tools(): AgentTool<any>[];
 diff --git a/packages/ai/scripts/generate-models.ts b/packages/ai/scripts/generate-models.ts
-index 56dcaa6d..a2387f0e 100644
+index b86d117b..a4b7a00f 100644
 --- a/packages/ai/scripts/generate-models.ts
 +++ b/packages/ai/scripts/generate-models.ts
 @@ -15,6 +15,7 @@ import {
@@ -138,7 +138,7 @@ index 56dcaa6d..a2387f0e 100644
  function getAnthropicMessagesCompat(provider: string, modelId: string): AnthropicMessagesCompat | undefined {
  	return EAGER_TOOL_INPUT_STREAMING_UNSUPPORTED_ANTHROPIC_MODELS.has(`${provider}:${modelId}`)
  		? { supportsEagerToolInputStreaming: false }
-@@ -1887,6 +1903,7 @@ async function generateModels() {
+@@ -1875,6 +1891,7 @@ async function generateModels() {
  
  	for (const model of allModels) {
  		applyThinkingLevelMetadata(model);
@@ -146,7 +146,7 @@ index 56dcaa6d..a2387f0e 100644
  	}
  
  	// Group by provider and deduplicate by model ID
-@@ -1939,6 +1956,9 @@ export const MODELS = {
+@@ -1927,6 +1944,9 @@ export const MODELS = {
  			if (model.thinkingLevelMap) {
  				output += `\t\t\tthinkingLevelMap: ${JSON.stringify(model.thinkingLevelMap)},\n`;
  			}
@@ -157,7 +157,7 @@ index 56dcaa6d..a2387f0e 100644
  			output += `\t\t\tcost: {\n`;
  			output += `\t\t\t\tinput: ${model.cost.input},\n`;
 diff --git a/packages/ai/src/models.generated.ts b/packages/ai/src/models.generated.ts
-index 63bd4e5f..c16cc7d0 100644
+index 9ad1d624..1e93609e 100644
 --- a/packages/ai/src/models.generated.ts
 +++ b/packages/ai/src/models.generated.ts
 @@ -6989,6 +6989,7 @@ export const MODELS = {
@@ -168,15 +168,15 @@ index 63bd4e5f..c16cc7d0 100644
  			input: ["text", "image"],
  			cost: {
  				input: 5,
-@@ -7323,6 +7324,7 @@ export const MODELS = {
+@@ -7307,6 +7308,7 @@ export const MODELS = {
  			baseUrl: "https://chatgpt.com/backend-api",
  			reasoning: true,
  			thinkingLevelMap: {"xhigh":"xhigh","minimal":"low"},
 +			speedModes: ["standard","fast"],
  			input: ["text", "image"],
  			cost: {
- 				input: 5,
-@@ -9057,7 +9059,7 @@ export const MODELS = {
+ 				input: 12.5,
+@@ -9041,7 +9043,7 @@ export const MODELS = {
  				cacheRead: 0.024999999999999998,
  				cacheWrite: 0.08333333333333334,
  			},
@@ -220,7 +220,7 @@ index 2125e685..dab3a13f 100644
   * Check if two models are equal by comparing both their id and provider.
   * Returns false if either model is null or undefined.
 diff --git a/packages/ai/src/providers/openai-codex-responses.ts b/packages/ai/src/providers/openai-codex-responses.ts
-index dc8d8ef7..619c10a1 100644
+index dc8d8ef7..e55bcb8c 100644
 --- a/packages/ai/src/providers/openai-codex-responses.ts
 +++ b/packages/ai/src/providers/openai-codex-responses.ts
 @@ -357,6 +357,16 @@ export const streamSimpleOpenAICodexResponses: StreamFunction<"openai-codex-resp
@@ -313,10 +313,10 @@ index 8cc446d3..12b85ae1 100644
  
  	if (context.tools && context.tools.length > 0) {
 diff --git a/packages/ai/src/providers/simple-options.ts b/packages/ai/src/providers/simple-options.ts
-index 288f2c52..7d5edcd6 100644
+index d9dcc348..616cc5a4 100644
 --- a/packages/ai/src/providers/simple-options.ts
 +++ b/packages/ai/src/providers/simple-options.ts
-@@ -7,6 +7,7 @@ export function buildBaseOptions(model: Model<Api>, options?: SimpleStreamOption
+@@ -17,6 +17,7 @@ export function buildBaseOptions(model: Model<Api>, options?: SimpleStreamOption
  		signal: options?.signal,
  		apiKey: apiKey || options?.apiKey,
  		transport: options?.transport,
@@ -357,7 +357,7 @@ index 851e4d4b..78d6fe0d 100644
  	cost: {
  		input: number; // $/million tokens
 diff --git a/packages/ai/test/openai-codex-stream.test.ts b/packages/ai/test/openai-codex-stream.test.ts
-index 65b88315..941e5631 100644
+index 65b88315..611832bc 100644
 --- a/packages/ai/test/openai-codex-stream.test.ts
 +++ b/packages/ai/test/openai-codex-stream.test.ts
 @@ -659,6 +659,63 @@ describe("openai-codex streaming", () => {

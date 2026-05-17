@@ -1,7 +1,8 @@
 diff --git a/packages/web-ui/src/components/AgentInterface.ts b/packages/web-ui/src/components/AgentInterface.ts
+index 9c8d4788..1e43abfe 100644
 --- a/packages/web-ui/src/components/AgentInterface.ts
 +++ b/packages/web-ui/src/components/AgentInterface.ts
-@@ -8,7 +8,7 @@ import "./MessageList.js";
+@@ -9,7 +9,7 @@ import "./MessageList.js";
  import "./Messages.js"; // Import for side effects to register the custom elements
  import { getAppStorage } from "../storage/app-storage.js";
  import "./StreamingMessageContainer.js";
@@ -10,7 +11,8 @@ diff --git a/packages/web-ui/src/components/AgentInterface.ts b/packages/web-ui/
  import type { Attachment } from "../utils/attachment-utils.js";
  import { formatUsage } from "../utils/format.js";
  import { i18n } from "../utils/i18n.js";
-@@ -383,6 +383,6 @@ export class AgentInterface extends LitElement {
+@@ -398,7 +398,7 @@ export class AgentInterface extends LitElement {
+ 							}}
  							.onThinkingChange=${
  								this.enableThinkingSelector
 -									? (level: "off" | "minimal" | "low" | "medium" | "high") => {
@@ -19,6 +21,7 @@ diff --git a/packages/web-ui/src/components/AgentInterface.ts b/packages/web-ui/
  										}
  									: undefined
 diff --git a/packages/web-ui/src/components/MessageEditor.ts b/packages/web-ui/src/components/MessageEditor.ts
+index e50d9401..697e6f2f 100644
 --- a/packages/web-ui/src/components/MessageEditor.ts
 +++ b/packages/web-ui/src/components/MessageEditor.ts
 @@ -1,4 +1,6 @@
@@ -92,6 +95,7 @@ diff --git a/packages/web-ui/src/components/MessageEditor.ts b/packages/web-ui/s
  											this.onThinkingChange?.(level);
  										},
 diff --git a/packages/web-ui/src/utils/i18n.ts b/packages/web-ui/src/utils/i18n.ts
+index 1f50a7d0..50b4c4ae 100644
 --- a/packages/web-ui/src/utils/i18n.ts
 +++ b/packages/web-ui/src/utils/i18n.ts
 @@ -148,6 +148,7 @@ declare module "@mariozechner/mini-lit" {

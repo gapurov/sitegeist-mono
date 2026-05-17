@@ -62,10 +62,25 @@ reverse_submodule_patch() {
 	exit 1
 }
 
+pi_mono_patch_stack_already_applied() {
+	local submodule_dir="$ROOT_DIR/packages/pi-mono"
+
+	cat \
+		"$PATCH_DIR/pi-mono/web-ui-agentinterface-streaming.patch" \
+		"$PATCH_DIR/pi-mono/web-ui-thinking-levels.patch" \
+		"$PATCH_DIR/pi-mono/pi-mono-speed-mode.patch" |
+		git -C "$submodule_dir" apply --reverse --check - >/dev/null 2>&1
+}
+
 if [[ "$MODE" == "--reverse" ]]; then
 	reverse_submodule_patch "packages/pi-mono" "pi-mono/pi-mono-speed-mode.patch"
 	reverse_submodule_patch "packages/pi-mono" "pi-mono/web-ui-thinking-levels.patch"
 	reverse_submodule_patch "packages/pi-mono" "pi-mono/web-ui-agentinterface-streaming.patch"
+	exit 0
+fi
+
+if pi_mono_patch_stack_already_applied; then
+	echo "Patch stack already applied: pi-mono"
 	exit 0
 fi
 
