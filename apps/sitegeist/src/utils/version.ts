@@ -1,5 +1,5 @@
-export const RELEASES_URL = "https://github.com/gapurov/sitegeist-mono/releases";
-const RELEASES_API_URL = "https://api.github.com/repos/gapurov/sitegeist-mono/releases?per_page=10";
+export const RELEASES_URL = "https://github.com/gapurov/sitegeist-remixed/releases";
+const RELEASES_API_URL = "https://api.github.com/repos/gapurov/sitegeist-remixed/releases?per_page=10";
 
 type GitHubRelease = {
 	tag_name?: unknown;
