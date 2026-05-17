@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-17
+
 ### Changed
 
 - Updated Pi workspace dependencies to latest upstream after v0.74.1.
