@@ -25,6 +25,10 @@
 - Make the plan extremely concise. Sacrifice grammar for the sake of concision.
 - At the end of each plan, give me a list of unresolved questions to answer, if any.
 
+## Releasing
+
+- Before a new app release: run `vp run submodules:update`; verify whether the local patch is still needed after upstream update; then follow the app release instructions.
+
 ## Docs
 
 - Follow links until domain makes sense; honor Read when hints.
