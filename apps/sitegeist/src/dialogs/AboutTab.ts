@@ -38,9 +38,9 @@ export class AboutTab extends SettingsTab {
 		}
 	}
 
-	private openUpdatePage() {
+	private openUpdatePage = () => {
 		window.open("https://sitegeist.ai/install.html#updating", "_blank");
-	}
+	};
 
 	render(): TemplateResult {
 		// Get version from the manifest

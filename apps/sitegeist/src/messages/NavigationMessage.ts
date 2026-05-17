@@ -66,7 +66,7 @@ export class NavigationMessageElement extends LitElement {
 				<button
 					class="inline-flex items-center gap-2 px-3 py-2 text-sm text-card-foreground bg-card border border-border rounded-lg hover:bg-accent/50 transition-colors max-w-full cursor-pointer shadow-lg"
 					@click=${() => {
-						chrome.tabs.create({ url: this.url });
+						void chrome.tabs.create({ url: this.url });
 					}}
 					title="Click to open: ${this.url}"
 				>

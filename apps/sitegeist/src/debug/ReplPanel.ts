@@ -101,7 +101,7 @@ export class ReplPanel extends LitElement {
 								@keydown=${(e: KeyboardEvent) => {
 									if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
 										e.preventDefault();
-										this.executeCode();
+										void this.executeCode();
 									}
 								}}
 							></textarea>

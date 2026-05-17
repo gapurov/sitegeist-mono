@@ -133,7 +133,7 @@ async function generateIcon(iconSize: IconSize) {
 		}
 	} catch (error) {
 		console.error(`Failed to generate ${iconSize.name}:`, error);
-		if (statusEl) statusEl.textContent = `✗ Error: ${error}`;
+		if (statusEl) statusEl.textContent = `✗ Error: ${String(error)}`;
 		if (downloadBtn) downloadBtn.disabled = true;
 		if (previewEl) previewEl.innerHTML = "";
 	}

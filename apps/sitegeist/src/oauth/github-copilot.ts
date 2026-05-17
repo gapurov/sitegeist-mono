@@ -194,7 +194,7 @@ export async function loginGitHubCopilot(
 	});
 
 	// Open the verification URL in a new tab
-	chrome.tabs.create({ url: device.verification_uri, active: true });
+	void chrome.tabs.create({ url: device.verification_uri, active: true });
 
 	const githubAccessToken = await pollForGitHubAccessToken(
 		domain,

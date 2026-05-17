@@ -73,13 +73,13 @@ const renderDebugPage = async () => {
 	const updateDebuggerMode = async (enabled: boolean) => {
 		debuggerMode = enabled;
 		await chrome.storage.local.set({ debuggerMode: enabled });
-		renderDebugPage(); // Re-render to update UI
+		void renderDebugPage(); // Re-render to update UI
 	};
 
 	const updateShowJsonMode = async (enabled: boolean) => {
 		showJsonMode = enabled;
 		await chrome.storage.local.set({ showJsonMode: enabled });
-		renderDebugPage(); // Re-render to update UI
+		void renderDebugPage(); // Re-render to update UI
 	};
 
 	const triggerSelectElement = async () => {
@@ -126,7 +126,7 @@ const renderDebugPage = async () => {
 						${Switch(
 							debuggerMode,
 							(checked: boolean) => {
-								updateDebuggerMode(checked);
+								void updateDebuggerMode(checked);
 							},
 							undefined,
 							false,
@@ -138,7 +138,7 @@ const renderDebugPage = async () => {
 						${Switch(
 							showJsonMode,
 							(checked: boolean) => {
-								updateShowJsonMode(checked);
+								void updateShowJsonMode(checked);
 							},
 							undefined,
 							false,
@@ -239,4 +239,4 @@ window.addEventListener("keydown", (e) => {
 	}
 });
 
-renderDebugPage();
+void renderDebugPage();

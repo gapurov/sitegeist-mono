@@ -164,7 +164,7 @@ export class BrowserJsRuntimeProvider implements SandboxRuntimeProvider {
 			} catch (e) {
 				respond({
 					success: false,
-					error: `Failed to parse arguments: ${e}`,
+					error: `Failed to parse arguments: ${String(e)}`,
 				});
 				return;
 			}

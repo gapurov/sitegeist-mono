@@ -2,8 +2,7 @@ import { icon } from "@mariozechner/mini-lit";
 import { Button } from "@mariozechner/mini-lit/dist/Button.js";
 import { Input } from "@mariozechner/mini-lit/dist/Input.js";
 import "@mariozechner/mini-lit/dist/ThemeToggle.js";
-import { Agent } from "@mariozechner/pi-agent-core/dist/agent.js";
-import type { AgentEvent, AgentMessage, AgentState, AgentTool } from "@mariozechner/pi-agent-core";
+import { Agent, type AgentEvent, type AgentMessage, type AgentState, type AgentTool } from "@mariozechner/pi-agent-core";
 import { getModel, getModels, type Model } from "@mariozechner/pi-ai";
 import {
 	ChatPanel,
@@ -179,7 +178,7 @@ async function hasAnyApiKey(): Promise<boolean> {
 
 function openApiKeysDialog(): Promise<void> {
 	return new Promise((resolve) => {
-		SettingsDialog.open(
+		void SettingsDialog.open(
 			[new ApiKeysOAuthTab(), new CostsTab(), new SkillsTab(), new ProxyTab(), new AboutTab()],
 			resolve,
 		);
@@ -434,7 +433,7 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			if (!currentSessionId && shouldSaveSession(messages)) {
 				currentSessionId = crypto.randomUUID();
 
-				port
+				void port
 					.sendMessage({
 						type: "acquireLock",
 						sessionId: currentSessionId,
@@ -449,7 +448,7 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			}
 
 			if (currentSessionId) {
-				saveSession();
+				void saveSession();
 			}
 
 			renderApp();
@@ -466,10 +465,10 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 		onModelSelect: async () => {
 			const providers = await getProvidersWithKeys();
 			if (providers.length === 0) {
-				openApiKeysDialog();
+				void openApiKeysDialog();
 				return;
 			}
-			ModelSelector.open(
+			void ModelSelector.open(
 				agent.state.model,
 				(model) => {
 					agent.state.model = model;
@@ -615,7 +614,7 @@ const renderApp = () => {
 						size: "sm",
 						children: icon(History, "sm"),
 						onClick: () => {
-							SitegeistSessionListDialog.open(
+							void SitegeistSessionListDialog.open(
 								(sessionId: string) => {
 									loadSession(sessionId);
 								},
@@ -700,7 +699,7 @@ const renderApp = () => {
 						size: "sm",
 						children: icon(Settings, "sm"),
 						onClick: () =>
-							SettingsDialog.open([
+							void SettingsDialog.open([
 								new ApiKeysOAuthTab(),
 								new CostsTab(),
 								new SkillsTab(),
@@ -877,7 +876,7 @@ function isNewerVersion(latest: string, current: string): boolean {
 	return false;
 }
 
-async function checkForUpdates() {
+async function _checkForUpdates() {
 	try {
 		const currentVersion = chrome.runtime.getManifest().version;
 
@@ -939,7 +938,7 @@ async function initApp() {
 	}
 
 	// TODO: re-enable update check when publishing to users
-	// await checkForUpdates();
+	// await _checkForUpdates();
 
 	// Initialize default skills
 	const { initializeDefaultSkills } = await import("./tools/skill.js");
@@ -1046,4 +1045,4 @@ async function initApp() {
 // Register custom user message renderer early, before any session loads
 registerUserMessageRenderer();
 
-initApp();
+void initApp();

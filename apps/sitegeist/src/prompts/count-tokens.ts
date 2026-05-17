@@ -259,4 +259,4 @@ async function main() {
 	console.log(`Complete agent setup: ${systemPlusToolsTokens.toLocaleString()} tokens`);
 }
 
-main();
+void main();

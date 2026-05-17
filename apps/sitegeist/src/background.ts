@@ -4,7 +4,7 @@ import type { LockedSessionsMessage, LockResultMessage, SidepanelToBackgroundMes
 chrome.action.onClicked.addListener((tab: chrome.tabs.Tab) => {
 	const tabId = tab?.id;
 	if (tabId && chrome.sidePanel.open) {
-		chrome.sidePanel.open({ tabId });
+		void chrome.sidePanel.open({ tabId });
 	}
 });
 
@@ -16,7 +16,7 @@ if (chrome.runtime.onUserScriptMessage) {
 		if (message.type === "abort-repl") {
 			// Forward to all open sidepanels (they'll check if they're streaming)
 			console.log("[Background] Relaying abort-repl to sidepanels");
-			chrome.runtime.sendMessage(message);
+			void chrome.runtime.sendMessage(message);
 			sendResponse({ success: true });
 			return true;
 		}
@@ -55,7 +55,7 @@ chrome.runtime.onConnect.addListener((port: chrome.runtime.Port) => {
 	chrome.storage.session.get(SIDEPANEL_OPEN_KEY, (data) => {
 		const openWindows = new Set<number>((data[SIDEPANEL_OPEN_KEY] as number[]) || []);
 		openWindows.add(windowId);
-		chrome.storage.session.set({ [SIDEPANEL_OPEN_KEY]: Array.from(openWindows) });
+		void chrome.storage.session.set({ [SIDEPANEL_OPEN_KEY]: Array.from(openWindows) });
 	});
 
 	port.onMessage.addListener((msg: SidepanelToBackgroundMessage) => {
@@ -87,7 +87,7 @@ chrome.runtime.onConnect.addListener((port: chrome.runtime.Port) => {
 				if (success) {
 					// Update locks in storage
 					sessionLocks[sessionId] = reqWindowId;
-					chrome.storage.session.set({ [SESSION_LOCKS_KEY]: sessionLocks });
+					void chrome.storage.session.set({ [SESSION_LOCKS_KEY]: sessionLocks });
 				}
 
 				port.postMessage(response);
@@ -131,14 +131,14 @@ chrome.commands.onCommand.addListener((command: string, sender?: chrome.tabs.Tab
 			closeSidepanel(windowId);
 		} else {
 			// Sidepanel is closed - open it
-			chrome.sidePanel.open({ windowId });
+			void chrome.sidePanel.open({ windowId });
 		}
 	}
 });
 
 function closeSidepanel(windowId: number, callCloseOnSidePanelAPI: boolean = true) {
 	if (callCloseOnSidePanelAPI) {
-		(chrome.sidePanel as any).close({ windowId });
+		void (chrome.sidePanel as any).close({ windowId });
 	}
 
 	// Update cache synchronously
@@ -159,7 +159,7 @@ function closeSidepanel(windowId: number, callCloseOnSidePanelAPI: boolean = tru
 		openWindows.delete(windowId);
 
 		// Save both updates atomically
-		chrome.storage.session.set({
+		void chrome.storage.session.set({
 			[SESSION_LOCKS_KEY]: sessionLocks,
 			[SIDEPANEL_OPEN_KEY]: Array.from(openWindows),
 		});

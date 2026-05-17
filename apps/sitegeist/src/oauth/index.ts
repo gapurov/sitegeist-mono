@@ -67,7 +67,7 @@ export async function oauthLogin(
 		case "google-gemini-cli":
 			return loginGeminiCli();
 		default:
-			throw new Error(`Unknown OAuth provider: ${provider}`);
+			throw new Error("Unknown OAuth provider");
 	}
 }
 

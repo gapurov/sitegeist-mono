@@ -421,7 +421,7 @@ export class SitegeistSessionListDialog extends DialogBase {
 												class="w-full px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10 transition-colors rounded-t-md font-medium"
 												@click=${() => {
 													this.showDeleteMenu = false;
-													this.handleDeleteAll();
+													void this.handleDeleteAll();
 												}}
 											>
 												${i18n("All sessions")}
@@ -430,7 +430,7 @@ export class SitegeistSessionListDialog extends DialogBase {
 												class="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-secondary transition-colors border-t border-border"
 												@click=${() => {
 													this.showDeleteMenu = false;
-													this.handleDeleteOlderThan(7);
+													void this.handleDeleteOlderThan(7);
 												}}
 											>
 												${i18n("Older than 7 days")}
@@ -439,7 +439,7 @@ export class SitegeistSessionListDialog extends DialogBase {
 												class="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-secondary transition-colors"
 												@click=${() => {
 													this.showDeleteMenu = false;
-													this.handleDeleteOlderThan(30);
+													void this.handleDeleteOlderThan(30);
 												}}
 											>
 												${i18n("Older than 30 days")}
@@ -448,7 +448,7 @@ export class SitegeistSessionListDialog extends DialogBase {
 												class="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-secondary transition-colors rounded-b-md"
 												@click=${() => {
 													this.showDeleteMenu = false;
-													this.handleDeleteOlderThan(90);
+													void this.handleDeleteOlderThan(90);
 												}}
 											>
 												${i18n("Older than 90 days")}
@@ -546,7 +546,7 @@ export class SitegeistSessionListDialog extends DialogBase {
 														class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-secondary text-foreground transition-opacity"
 														@click=${(e: Event) => {
 															e.stopPropagation();
-															this.handleExport(session.id);
+															void this.handleExport(session.id);
 														}}
 														title=${i18n("Export")}
 													>

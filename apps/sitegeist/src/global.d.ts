@@ -1,1 +1,1 @@
-/// <reference path="./utils/i18n-extension.ts" />
+import "./utils/i18n-extension.js";

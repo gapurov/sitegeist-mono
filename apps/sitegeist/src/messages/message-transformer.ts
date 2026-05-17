@@ -75,7 +75,7 @@ function reorderMessages(messages: Message[]): Message[] {
 // Custom message transformer for browser extension
 // Handles navigation messages and app-specific message types
 export async function browserMessageTransformer(messages: AgentMessage[]): Promise<Message[]> {
-	const transformed = [];
+	const transformed: Message[] = [];
 
 	for (const m of messages) {
 		// Filter out UI-only messages
@@ -112,7 +112,7 @@ ${skillsInfo}
 </instructions>`,
 			} as Message);
 		} else if (m.role === "user") {
-			const { attachments, ...rest } = m as any;
+			const { attachments: _attachments, ...rest } = m as Message & { attachments?: unknown };
 			transformed.push(rest as Message);
 		} else {
 			transformed.push(m as Message);

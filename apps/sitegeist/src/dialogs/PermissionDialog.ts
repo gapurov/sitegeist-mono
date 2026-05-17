@@ -78,7 +78,7 @@ export abstract class PermissionDialog extends DialogBase {
 				this.requestUpdate();
 			}
 		} catch (error) {
-			this.errorMessage = `${error}`;
+			this.errorMessage = String(error);
 			this.requesting = false;
 			this.requestUpdate();
 		}

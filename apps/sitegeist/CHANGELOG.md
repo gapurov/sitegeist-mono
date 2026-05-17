@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated Pi workspace dependencies to latest upstream after v0.74.1.
+
+### Fixed
+
+- Fixed Sitegeist compatibility with the updated Pi agent package exports and stricter checks.
+
 ## [1.0.0] - 2026-03-15
 
 ### Added

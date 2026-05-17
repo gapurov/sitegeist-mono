@@ -30,7 +30,7 @@ export class CostsTab extends SettingsTab {
 		super.updated?.(_changedProperties);
 		// Render charts after DOM update
 		if (!this.lineChart && !this.loading) {
-			this.renderCharts();
+			void this.renderCharts();
 		}
 	}
 
@@ -311,7 +311,7 @@ export class CostsTab extends SettingsTab {
 						value: this.dateRange,
 						options: dateRangeOptions,
 						onChange: (value) => {
-							this.handleDateRangeChange(value as typeof this.dateRange);
+							void this.handleDateRangeChange(value as typeof this.dateRange);
 						},
 						size: "md",
 					})}

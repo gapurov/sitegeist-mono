@@ -53,7 +53,7 @@ export async function requestUserScriptsPermission(): Promise<{
 			console.error("Failed to request userScripts permission:", error);
 			return {
 				granted: false,
-				message: `Failed to request permission: ${error}`,
+				message: `Failed to request permission: ${String(error)}`,
 			};
 		}
 	}
@@ -159,7 +159,7 @@ async function wrapperFunction() {
 	let timeoutId: number;
 
 	// Injection marker (survives .toString())
-	("__INJECT_PROVIDERS_HERE__");
+	void "__INJECT_PROVIDERS_HERE__";
 
 	const cleanup = () => {
 		if (timeoutId) clearTimeout(timeoutId);

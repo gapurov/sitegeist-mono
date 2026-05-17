@@ -59,10 +59,9 @@ export async function executeJavaScript(
 
 	// Only inject overlay if code uses browserjs() (interacts with active tab)
 	const usesBrowserjs = code.includes("browserjs(");
-	let overlayTabId: number | undefined;
 	if (usesBrowserjs) {
 		try {
-			overlayTabId = await injectOverlayForActiveTab(taskName || "Executing JavaScript");
+			await injectOverlayForActiveTab(taskName || "Executing JavaScript");
 		} catch (error) {
 			console.warn("[REPL] Failed to inject overlay:", error);
 			// Continue execution even if overlay fails
@@ -284,7 +283,7 @@ export const javascriptReplRenderer: ToolRenderer<ReplParams, ReplResult> = {
 				if (isTextBased && f.contentBase64) {
 					try {
 						extractedText = atob(f.contentBase64);
-					} catch (e) {
+					} catch {
 						console.warn("Failed to decode base64 content for", f.fileName);
 					}
 				}

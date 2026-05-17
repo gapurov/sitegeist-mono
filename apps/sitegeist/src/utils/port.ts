@@ -201,7 +201,7 @@ export async function sendMessage<TRequest extends SidepanelToBackgroundMessage>
 
 			// If this was our last attempt, give up
 			if (attempt === 2) {
-				throw new Error(`[Port] Failed to send message after ${attempt} attempts: ${err}`);
+				throw new Error(`[Port] Failed to send message after ${attempt} attempts: ${String(err)}`);
 			}
 
 			// Retry: disconnect and loop will reconnect

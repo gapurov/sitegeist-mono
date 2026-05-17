@@ -127,7 +127,7 @@ export class NativeInputEventsRuntimeProvider implements SandboxRuntimeProvider 
 			}
 
 			(window as any).nativeClick = async (selector: string): Promise<void> => {
-				const response = await sendRuntimeMessage({
+				await sendRuntimeMessage({
 					type: "native-input",
 					action: "click",
 					selector,
@@ -136,7 +136,7 @@ export class NativeInputEventsRuntimeProvider implements SandboxRuntimeProvider 
 			};
 
 			(window as any).nativeType = async (selector: string, text: string): Promise<void> => {
-				const response = await sendRuntimeMessage({
+				await sendRuntimeMessage({
 					type: "native-input",
 					action: "type",
 					selector,
@@ -145,7 +145,7 @@ export class NativeInputEventsRuntimeProvider implements SandboxRuntimeProvider 
 			};
 
 			(window as any).nativePress = async (key: string): Promise<void> => {
-				const response = await sendRuntimeMessage({
+				await sendRuntimeMessage({
 					type: "native-input",
 					action: "press",
 					key,
@@ -153,7 +153,7 @@ export class NativeInputEventsRuntimeProvider implements SandboxRuntimeProvider 
 			};
 
 			(window as any).nativeKeyDown = async (key: string): Promise<void> => {
-				const response = await sendRuntimeMessage({
+				await sendRuntimeMessage({
 					type: "native-input",
 					action: "keyDown",
 					key,
@@ -161,7 +161,7 @@ export class NativeInputEventsRuntimeProvider implements SandboxRuntimeProvider 
 			};
 
 			(window as any).nativeKeyUp = async (key: string): Promise<void> => {
-				const response = await sendRuntimeMessage({
+				await sendRuntimeMessage({
 					type: "native-input",
 					action: "keyUp",
 					key,

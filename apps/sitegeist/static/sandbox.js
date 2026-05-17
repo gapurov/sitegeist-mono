@@ -27,6 +27,7 @@ window.addEventListener("message", (event) => {
 				if (scriptContent.trim()) {
 					try {
 						// Use Function constructor to validate syntax without executing
+						// eslint-disable-next-line @typescript-eslint/no-implied-eval
 						new Function(scriptContent);
 					} catch (jsError) {
 						throw new Error(`JavaScript syntax error in <script> tag ${i + 1}: ${jsError.message}`);
